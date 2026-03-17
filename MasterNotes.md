@@ -135,4 +135,17 @@ echo "Done. Contigs should be in: ${OUTDIR}/final.contigs.fa"
 
 nano megahit.slurm
 
+#COUNTING THE SEQUENCES OF THE FASTQC -Team 2
+#sbatch megahit1.sbatch
+#ls # this was the output so the slurm was succesful: hbw18_megahit_out  megahit1.sbatch
+#cd hbw18_megahit_out/
+#ls
+#grep -c "^>" final.contigs.fa #this is the number of sequences in the file 
+
+
+#CHECKING THE QUALITY
+#mamba activate megahit-env
+#mamba install -c bioconda seqkit
+#install:\seqkit stats -a final.contigs.fa
+
 
