@@ -86,9 +86,9 @@ trimmomatic PE -threads $SLURM_CPUS_PER_TASK \
   SLIDINGWINDOW:4:20 MINLEN:50
 
   
-# RUN FASTQC ON TRIMMED FILES
-mkdir -p fastqc_cleaned
-fastqc -o fastqc_cleaned project_reads_trimmed/R*_paired.fq.gz
+# RUN FASTQC ON TRIMMED FILES -> Team 2
+#mkdir -p fastqc_cleaned
+#fastqc -o fastqc_cleaned project_reads_trimmed/R*_paired.fq.gz
 ```
 Compare these reports to the raw ones — quality should be better.
 
