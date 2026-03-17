@@ -85,7 +85,78 @@ trimmomatic PE -threads $SLURM_CPUS_PER_TASK \
   ILLUMINACLIP:/home/mrk143/TruSeq3-PE.fa:2:30:10 \
   SLIDINGWINDOW:4:20 MINLEN:50
 
-  
+ # 3/17/26 GROUP 1
+# GOAL: Bog frozen rep A (SAMN08784152), assemble contigs from trimmed reads
+# INSTALL MEGAHIT
+module load mamba/
+Create environment with megahit 
+mamba create -y -n megahit-env -c conda-forge -c bioconda megahit
+
+# WRITE SLURM SCRIPT FOR MEGAHIT
+slurm script:
+#!/bin/bash
+#SBATCH --job-name=megahit_sample_name   	# how job appears in the queue
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=8                 
+#SBATCH --mem=32G                         
+#SBATCH --time=03:00:00                   
+#SBATCH --output=/home/sb1949/bioinform/classproject/logs/megahit_test1.%j.out      
+#SBATCH --error=/home/sb1949/bioinform/classproject/logs/megahit_test1.%j.err       
+
+#note %j = job ID
+
+# ==== Load mamba/conda module ====
+module load mamba
+source $(mamba info --base)/etc/profile.d/conda.sh
+
+# Activate the environment where you had MEGAHIT installed
+conda activate megahit-env
+
+# ==== Set paths and filenames ====
+
+# Directory where the cleaned reads live
+READDIR=/home/sb1949/bioinform/classproject/trimmedreads
+
+# Input read files (paired-end)
+READ1=${READDIR}/mrk143_group_project_files_project_reads_trimmed_R1_paired.fq.gz
+READ2=${READDIR}/mrk143_group_project_files_project_reads_trimmed_R2_paired.fq.gz
+
+# Output directory (give it a name, it will be created by MEGAHIT)
+OUTDIR=/home/sb1949/bioinform/classproject/megahit/mrk143_megahit_out
+
+# ==== Run MEGAHIT ====
+
+megahit \
+  -1 ${READ1} \
+  -2 ${READ2} \
+  -t ${SLURM_CPUS_PER_TASK} \
+  -o ${OUTDIR}
+
+echo "Done. Contigs should be in: ${OUTDIR}/final.contigs.fa"
+
+
+# CHECK OUTPUT
+Navigate to output folder
+cd /home/mrk143/project/megahit/bog_frozen_A_megahit_out
+Should see: final.contigs.fa, log, and intermediate files
+ls
+Count how many contigs assembled (lines starting with >)
+grep -c ">" final.contigs.fa
+Peek at first few contigs
+head -20 final.contigs.fa
+
+# INSTALL SEQKIT (run on login node, only need to do once)
+module load mamba/
+mamba activate megahit-env
+mamba install -c bioconda seqkit
+
+# RUN SEQKIT STATS ON ASSEMBLY
+seqkit stats -a final.contigs.fa
+
+#  UPLOAD ASSEMBLY TO CLASS BUCKET
+gsutil cp megahit/bog_frozen_A_megahit_out/final.contigs.fa gs://gu-biology-dept-class/group3/megahit/
+
+
 # RUN FASTQC ON TRIMMED FILES -> Team 2
 #mkdir -p fastqc_cleaned
 #fastqc -o fastqc_cleaned project_reads_trimmed/R*_paired.fq.gz
