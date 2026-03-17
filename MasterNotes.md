@@ -223,6 +223,7 @@ nano megahit.slurm
 
 file              format  type  num_seqs     sum_len  min_len  avg_len  max_len   Q1   Q2   Q3  sum_gap  N50  N50_num  
 final.contigs.fa  FASTA   DNA     73,883  41,566,611      200    562.6   97,639  335  387  488        0  497    2,449       
+
 Q20(%)  Q30(%)  AvgQual  GC(%)  sum_n
 0       0        0   47.5      0
 
