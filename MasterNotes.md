@@ -160,7 +160,7 @@ gsutil cp megahit/bog_frozen_A_megahit_out/final.contigs.fa gs://gu-biology-dept
 # RUN FASTQC ON TRIMMED FILES -> Team 2
 #mkdir -p fastqc_cleaned
 #fastqc -o fastqc_cleaned project_reads_trimmed/R*_paired.fq.gz
-```
+
 Compare these reports to the raw ones — quality should be better.
 
 # INSTALL MEGAHIT
@@ -206,7 +206,7 @@ echo "Done. Contigs should be in: ${OUTDIR}/final.contigs.fa"
 
 nano megahit.slurm
 
-#COUNTING THE SEQUENCES OF THE FASTQC -Team 2
+# COUNTING THE SEQUENCES OF THE FASTQC -Team 2
 #sbatch megahit1.sbatch
 #ls # this was the output so the slurm was succesful: hbw18_megahit_out  megahit1.sbatch
 #cd hbw18_megahit_out/
@@ -214,9 +214,16 @@ nano megahit.slurm
 #grep -c "^>" final.contigs.fa #this is the number of sequences in the file 
 
 
-#CHECKING THE QUALITY
+# CHECKING THE QUALITY
 #mamba activate megahit-env
 #mamba install -c bioconda seqkit
 #install:\seqkit stats -a final.contigs.fa
+
+# Results from Seqkit
+
+file              format  type  num_seqs     sum_len  min_len  avg_len  max_len   Q1   Q2   Q3  sum_gap  N50  N50_num  
+final.contigs.fa  FASTA   DNA     73,883  41,566,611      200    562.6   97,639  335  387  488        0  497    2,449       
+Q20(%)  Q30(%)  AvgQual  GC(%)  sum_n
+0       0        0   47.5      0
 
 
