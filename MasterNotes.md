@@ -57,10 +57,9 @@ fastqc -o fastqc_out raw/*.fastq.gz
 ls fastqc_out
 
 # RUN TRIMMOMATIC
-slurm script:
 #!/bin/bash
-#SBATCH --mail-type=END,FAIL --mail-user=mrk143@georgetown.edu
-#SBATCH --job-name="project_trim"
+#SBATCH --mail-type=END,FAIL --mail-user=mrk143@georgetown.edu # send this to the email when the slurm is complete 
+#SBATCH --job-name= "project_trim"
 #SBATCH --output="%x.o%j"
 
 #SBATCH --nodes=1
@@ -92,4 +91,48 @@ mkdir -p fastqc_cleaned
 fastqc -o fastqc_cleaned project_reads_trimmed/R*_paired.fq.gz
 ```
 Compare these reports to the raw ones — quality should be better.
+
+# INSTALL MEGAHIT
+#!/bin/bash
+#SBATCH --job-name=megahit_SRR37587558   	# how job appears in the queue
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=8                 
+#SBATCH --mem=32G                         
+#SBATCH --time=03:00:00                   
+#SBATCH --output=/home/hbw18/bioinfoproject/logs/megahit_test1.%j.out      
+#SBATCH --error=/home/hbw18/bioinfoproject/logs/megahit_test1.%j.err       
+
+#note %j = job ID
+
+# ==== Load mamba/conda module (students: no need to change) ====
+module load mamba
+source $(mamba info --base)/etc/profile.d/conda.sh
+
+# Activate the environment where you had MEGAHIT installed
+conda activate megahit-env
+
+# ==== Set paths and filenames (students: edit this block!) ====
+
+# Directory where the cleaned reads live
+READDIR=/home/hbw18/trimmed/trim1 #can input where the cleaned reads are 
+
+# Input read files (paired-end)
+READ1=${READDIR}/SRR37587558_R1_paired.fastq.gz
+READ2=${READDIR}/SRR37587558_R2_paired.fastq.gz
+
+# Output directory (give it a name, it will be created by MEGAHIT)
+OUTDIR=/home/hbw18/bioinfoproject/megahit/hbw18_megahit_out
+
+# ==== Run MEGAHIT ====
+
+megahit \
+  -1 ${READ1} \
+  -2 ${READ2} \
+  -t ${SLURM_CPUS_PER_TASK} \
+  -o ${OUTDIR}
+
+echo "Done. Contigs should be in: ${OUTDIR}/final.contigs.fa"
+
+nano megahit.slurm
+
 
