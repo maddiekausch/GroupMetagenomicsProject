@@ -269,3 +269,51 @@ virsorter run \
 
 echo "Done."
 
+# Find your results.
+(vs2-env) [hbw18@m12-controller ~]$ cd bioinfoproject
+(vs2-env) [hbw18@m12-controller bioinfoproject]$ cd virosorter
+(vs2-env) [hbw18@m12-controller virosorter]$ cd vs2-
+(vs2-env) [hbw18@m12-controller vs2-]$ ls
+config.yaml               final-viral-combined.fa  iter-0
+final-viral-boundary.tsv  final-viral-score.tsv
+(vs2-env) [hbw18@m12-controller vs2-]$ grep -c "^>" final-viral-combined.fa
+41
+(vs2-env) [hbw18@m12-controller vs2-]$ module load mamba/
+(vs2-env) [hbw18@m12-controller vs2-]$ mamba activate megahit-env
+(megahit-env) [hbw18@m12-controller vs2-]$ seqkit seq -m 5000 final-viral-combined.fa | grep -c “>”
+(megahit-env) [hbw18@m12-controller vs2-]$ seqkit seq -m 5000 final-viral-combined.fa > final-viral-combined_min5kb.fa
+[WARN] you may switch on flag -g/--remove-gaps to remove spaces
+(megahit-env) [hbw18@m12-controller vs2-]$ grep -c "^>" final-viral-combined_min5kb.fa
+41
+
+# Install vclust
+(megahit-env) [hbw18@m12-controller vs2-]$ module load mamba
+(megahit-env) [hbw18@m12-controller vs2-]$ mamba create -n votu-env -c bioconda -c conda-forge vclust
+(megahit-env) [hbw18@m12-controller vs2-]$ mamba activate votu-env
+
+# Prefilter similar genome sequence pairs before conducting pairwise alignments.
+(votu-env) [hbw18@m12-controller vs2-]$ vclust prefilter -i final-viral-combined_min5kb.fa -o fltr.txt
+
+# Align similar genome sequence pairs and calculate pairwise ANI measures.
+(votu-env) [hbw18@m12-controller vs2-]$ vclust align -i final-viral-combined_min5kb.fa -o ani.tsv --filter fltr.txt
+
+# Cluster genome sequences based on given ANI measure and minimum threshold (these files were generated in the previous steps)
+(votu-env) [hbw18@m12-controller vs2-]$ vclust cluster -i ani.tsv -o clusters.tsv --ids ani.ids.tsv --metric ani --ani 0.95 --out-repr
+
+# Make a list of the vOTU headers
+(votu-env) [hbw18@m12-controller vs2-]$ awk '{print $2}' clusters.tsv | sort -u > votu_seeds.txt
+
+# Put these vOTU “seed” sequences into a new file and deactivate mamba.
+(votu-env) [hbw18@m12-controller vs2-]$ mamba deactivate
+(megahit-env) [hbw18@m12-controller vs2-]$ seqkit grep -f votu_seeds.txt final-viral-combined_min5kb.fa > votus_final.fna
+
+# Check Numbers
+(megahit-env) [hbw18@m12-controller vs2-]$ wc -l votu_seeds.txt
+42 votu_seeds.txt
+(megahit-env) [hbw18@m12-controller vs2-]$ grep -c ">" votus_final.fna
+41
+
+# Edit the text to take out header (which was messing up the count)
+(megahit-env) [hbw18@m12-controller vs2-]$ nano votu_seeds.txt
+(megahit-env) [hbw18@m12-controller vs2-]$ wc -l votu_seeds.txt
+41 votu_seeds.txt
