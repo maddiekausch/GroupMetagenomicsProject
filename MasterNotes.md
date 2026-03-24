@@ -105,26 +105,26 @@ slurm script:
 
 #note %j = job ID
 
-# ==== Load mamba/conda module ====
+#==== Load mamba/conda module ====
 module load mamba
 source $(mamba info --base)/etc/profile.d/conda.sh
 
-# Activate the environment where you had MEGAHIT installed
+#Activate the environment where you had MEGAHIT installed
 conda activate megahit-env
 
-# ==== Set paths and filenames ====
+#==== Set paths and filenames ====
 
-# Directory where the cleaned reads live
+#Directory where the cleaned reads live
 READDIR=/home/sb1949/bioinform/classproject/trimmedreads
 
-# Input read files (paired-end)
+#Input read files (paired-end)
 READ1=${READDIR}/mrk143_group_project_files_project_reads_trimmed_R1_paired.fq.gz
 READ2=${READDIR}/mrk143_group_project_files_project_reads_trimmed_R2_paired.fq.gz
 
-# Output directory (give it a name, it will be created by MEGAHIT)
+#Output directory (give it a name, it will be created by MEGAHIT)
 OUTDIR=/home/sb1949/bioinform/classproject/megahit/mrk143_megahit_out
 
-# ==== Run MEGAHIT ====
+#==== Run MEGAHIT ====
 
 megahit \
   -1 ${READ1} \
@@ -175,26 +175,26 @@ Compare these reports to the raw ones — quality should be better.
 
 #note %j = job ID
 
-# ==== Load mamba/conda module (students: no need to change) ====
+#==== Load mamba/conda module (students: no need to change) ====
 module load mamba
 source $(mamba info --base)/etc/profile.d/conda.sh
 
-# Activate the environment where you had MEGAHIT installed
+#Activate the environment where you had MEGAHIT installed
 conda activate megahit-env
 
-# ==== Set paths and filenames (students: edit this block!) ====
+#==== Set paths and filenames (students: edit this block!) ====
 
-# Directory where the cleaned reads live
+#Directory where the cleaned reads live
 READDIR=/home/hbw18/trimmed/trim1 #can input where the cleaned reads are 
 
-# Input read files (paired-end)
+#Input read files (paired-end)
 READ1=${READDIR}/SRR37587558_R1_paired.fastq.gz
 READ2=${READDIR}/SRR37587558_R2_paired.fastq.gz
 
-# Output directory (give it a name, it will be created by MEGAHIT)
+#Output directory (give it a name, it will be created by MEGAHIT)
 OUTDIR=/home/hbw18/bioinfoproject/megahit/hbw18_megahit_out
 
-# ==== Run MEGAHIT ====
+#==== Run MEGAHIT ====
 
 megahit \
   -1 ${READ1} \
@@ -227,4 +227,45 @@ final.contigs.fa  FASTA   DNA     73,883  41,566,611      200    562.6   97,639 
 Q20(%)  Q30(%)  AvgQual  GC(%)  sum_n
 0       0        0   47.5      0
 
+
+# SLURM SCRIPT FOR VIRSORTER2
+
+#!/bin/bash
+#SBATCH --job-name=virsorter_sample3
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=20G
+#SBATCH --time=03:00:00
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=mrk143@georgetown.edu
+#SBATCH --output=/home/mrk143/group_project_files/logs/virsorter.%j.out
+#SBATCH --error=/home/mrk143/group_project_files/logs/virsorter.%j.err
+
+#==== Load mamba (students: no need to change) ====
+module load mamba
+source $(mamba info --base)/etc/profile.d/conda.sh
+
+#Activate the environment where you had VirSorter2 installed
+mamba activate vs2-env
+
+#==== Set paths and filenames ====
+#set up directories
+INDIR=/home/mrk143/group_project_files/megahit/mrk143_megahit_out        #directory where input will come from
+OUTROOT=/home/mrk143/group_project_files/virsorter       #directory output will go
+
+SAMPLE_ID=sample3                                #just the basic sample name
+INPUT="${INDIR}/final.contigs.fa"                #contig file name/location
+OUTDIR="${OUTROOT}/vs2-${SAMPLE_ID}"
+mkdir -p "${OUTDIR}"
+
+#==== Run virsorter2 with >5kb cutoff and DNA virus categories first
+echo "Running VirSorter2 on ${INPUT}"
+virsorter run \
+  -w "${OUTDIR}" \
+  -i "${INPUT}" \
+  --keep-original-seq \
+  --include-groups dsDNAphage,NCLDV,ssDNA \
+  --min-length 5000
+
+echo "Done."
 
