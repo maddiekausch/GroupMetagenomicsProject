@@ -317,3 +317,192 @@ final-viral-boundary.tsv  final-viral-score.tsv
 (megahit-env) [hbw18@m12-controller vs2-]$ nano votu_seeds.txt
 (megahit-env) [hbw18@m12-controller vs2-]$ wc -l votu_seeds.txt
 41 votu_seeds.txt
+
+# 3/24/26
+# VirSorter2
+bash#!/bin/bash
+#SBATCH --job-name=virsorter_sample3
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=20G
+#SBATCH --time=03:00:00
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=mrk143@georgetown.edu
+#SBATCH --output=/home/mrk143/group_project_files/logs/virsorter.%j.out
+#SBATCH --error=/home/mrk143/group_project_files/logs/virsorter.%j.err
+
+module load mamba
+source $(mamba info --base)/etc/profile.d/conda.sh
+mamba activate vs2-env
+
+INDIR=/home/mrk143/group_project_files/megahit/mrk143_megahit_out
+OUTROOT=/home/mrk143/group_project_files/virsorter
+SAMPLE_ID=sample3
+INPUT="${INDIR}/final.contigs.fa"
+OUTDIR="${OUTROOT}/vs2-${SAMPLE_ID}"
+mkdir -p "${OUTDIR}"
+
+echo "Running VirSorter2 on ${INPUT}"
+virsorter run \
+  -w "${OUTDIR}" \
+  -i "${INPUT}" \
+  --keep-original-seq \
+  --include-groups dsDNAphage,NCLDV,ssDNA \
+  --min-length 5000
+
+echo "Done."
+VirSorter2 Output
+config.yaml               final-viral-combined.fa
+final-viral-boundary.tsv  final-viral-score.tsv
+iter-0/
+bash# Count viral contigs
+grep -c "^>" final-viral-combined.fa
+# 41
+
+# Filter for >5kb and check count
+seqkit seq -m 5000 final-viral-combined.fa > final-viral-combined_min5kb.fa
+grep -c "^>" final-viral-combined_min5kb.fa
+# 41
+
+# Step 7: vclust — Cluster vOTUs
+bash# Install vclust (only once)
+module load mamba
+mamba create -n votu-env -c bioconda -c conda-forge vclust
+mamba activate votu-env
+bash# 1. Prefilter similar genome sequence pairs before pairwise alignments
+vclust prefilter -i final-viral-combined_min5kb.fa -o fltr.txt
+
+# 2. Align and calculate pairwise ANI
+vclust align -i final-viral-combined_min5kb.fa -o ani.tsv --filter fltr.txt
+
+# 3. Cluster at 95% ANI
+vclust cluster -i ani.tsv -o clusters.tsv --ids ani.ids.tsv \
+  --metric ani --ani 0.95 --out-repr
+
+# 4. Make a list of vOTU representative sequence headers
+awk '{print $2}' clusters.tsv | sort -u > votu_seeds.txt
+
+# 5. Extract representative sequences
+mamba deactivate
+mamba activate megahit-env
+seqkit grep -f votu_seeds.txt final-viral-combined_min5kb.fa > votus_final.fna
+Results:
+bashwc -l votu_seeds.txt
+
+# 42 votu_seeds.txt  ← had a stray header line
+
+nano votu_seeds.txt  # removed header
+
+wc -l votu_seeds.txt
+# 41 votu_seeds.txt
+
+grep -c ">" votus_final.fna
+# 41
+
+# Step 8: CheckV — Quality Metrics
+Purpose: Evaluate completeness, contamination, and trim host regions from proviruses.
+Input: vOTUs.fna (after VirSorter2 + vclust)
+What CheckV does:
+Identifies and trims host regions (ORF annotation, gene/GC content)
+Estimates completeness vs. a database of complete viral genomes
+Identifies closed genomes (terminal repeats)
+Assigns quality tiers: Complete / High / Medium / Low / Undetermined
+
+Output columns: completeness (%), quality tier, estimated genome length, host contamination estimate, cleaned sequences.
+Why trim host segments for AMG studies? Host-derived genes are annotated as metabolic genes more often than viral ones. Even minor contamination inflates AMG detection. Only regions confidently identified as viral should be used downstream, and candidate AMGs must be flanked by viral-like genes and not at scaffold edges.
+
+# Setup
+bashmkdir checkv && cd checkv
+module load checkv
+checkv download_database ./
+
+# Slurm Script
+bash#!/bin/bash
+#SBATCH --job-name=checkv
+#SBATCH --output=/home/NETID/bioinform/classproject/logs/checkv-%j.out
+#SBATCH --error=/home/NETID/bioinform/classproject/logs/checkv-%j.err
+#SBATCH --time=03:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=16G
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=NETID@georgetown.edu
+
+module load checkv
+
+CHECKVDB="/home/NETID/iceland/virusid/checkv/checkv-db-v1.5"
+SAMPLE_ID="vOTUs"
+INPUT="/home/NETID/bioinform/classproject/votus/votus_10kb_6samples.fna"
+OUTDIR="/home/NETID/bioinform/classproject/checkv/${SAMPLE_ID}"
+mkdir -p "${OUTDIR}"
+
+echo "Running CheckV on ${INPUT}"
+checkv end_to_end "${INPUT}" "${OUTDIR}" -d "${CHECKVDB}" -t ${SLURM_CPUS_PER_TASK}
+echo "Done."
+Find Results
+bash# Results are in:
+quality_summary_votus.tsv
+Note how many contigs are Complete / High / Medium / Low quality.
+Get Pooled Class vOTUs
+bashgcloud storage cp gs://gu-biology-dept-class/ClassProject/votus_10kb_6samples.fna [your_destination]
+
+Why use pooled class vOTUs? Pooling all samples before mapping ensures reads from every sample are aligned to the same reference, making cross-sample abundance comparisons valid. Rare viruses present in only one sample can still be detected across others.
+
+
+# Step 9: Bowtie2 — Read Alignment
+Purpose: Map trimmed reads back to the vOTU reference to measure abundance (coverage).
+Setup
+bashmkdir bowtie2 && cd bowtie2
+
+# Copy vOTU reference file into this directory
+cp [path/to/votus_10kb_6samples.fna] .
+
+module load bowtie2
+
+# Build the index
+bowtie2-build votus_10kb_6samples.fna votu_index
+Slurm Script
+bash#!/bin/bash
+#SBATCH --job-name=bowtie2_vOTUs
+#SBATCH --output=/home/NETID/bioinform/classproject/logs/bowtie-%j.out
+#SBATCH --error=/home/NETID/bioinform/classproject/logs/bowtie-%j.err
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=NETID@georgetown.edu
+#SBATCH --time=8:00:00
+#SBATCH --mem=16G
+
+# --------- SET UP ----------
+SAMPLE="sampleN_netid"   # EDIT: your sample number + netid
+INDEX="/home/NETID/bioinform/classproject/bowtie2/index/votu_index"
+OUTPUTDIR="/home/NETID/bioinform/classproject/bowtie2/${SAMPLE}"
+R1="/home/NETID/.../trimmedreads/NETID_cleaned_reads_R1_paired.fq.gz"   # EDIT
+R2="/home/NETID/.../trimmedreads/NETID_cleaned_reads_R2_paired.fq.gz"   # EDIT
+
+# --------- LOAD MODULES ----------
+module purge
+module load bowtie2/2.5.4
+
+# --------- RUN ----------
+mkdir -p "${OUTPUTDIR}"
+cd "${OUTPUTDIR}"
+mkdir -p logs
+
+echo "Running bowtie2 on sample ${SAMPLE}"
+bowtie2 -p 8 -x "${INDEX}" -1 "${R1}" -2 "${R2}" \
+  | samtools view -bS - > "${SAMPLE}.bam"
+echo "Finished alignment"
+
+# --------- SORT & INDEX ----------
+echo "Sorting..."
+samtools sort "${SAMPLE}.bam" > "${SAMPLE}_sorted.bam"
+echo "Indexing..."
+samtools index "${SAMPLE}_sorted.bam"
+echo "Finished ${SAMPLE}"
+Output files:
+FileDescriptionSAMPLE.bamCompressed binary alignmentSAMPLE_sorted.bamSorted BAM (required for indexing)SAMPLE_sorted.bam.baiBAM index (enables fast lookup)
+
+# Upload to Class Bucket
+gcloud storage cp SAMPLE_sorted.bam gs://gu-biology-dept-class/ClassProject/bam
+gcloud storage cp SAMPLE_sorted.bam.bai gs://gu-biology-dept-class/ClassProject/bam
+
