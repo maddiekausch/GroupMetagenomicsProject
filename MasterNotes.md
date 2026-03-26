@@ -180,6 +180,7 @@ rm -rf db
 visorter setup -d db -j 4
 
 # Create Slurm Script for running virsorter 
+nano virosorter.batch
 #!/bin/bash
 #SBATCH --job-name=virsorter_mrk143
 #SBATCH --nodes=1
@@ -230,55 +231,56 @@ virsorter run \
 echo "Done."
 
 # Find your results.
-(vs2-env) [hbw18@m12-controller ~]$ cd bioinfoproject
-(vs2-env) [hbw18@m12-controller bioinfoproject]$ cd virosorter
-(vs2-env) [hbw18@m12-controller virosorter]$ cd vs2-
-(vs2-env) [hbw18@m12-controller vs2-]$ ls
+(vs2-env) [mrk143@m12-controller ~]$ cd bioinfoproject
+(vs2-env) [mrk143@m12-controller bioinfoproject]$ cd virosorter
+(vs2-env) [mrk143@m12-controller virosorter]$ cd vs2-
+(vs2-env) [mrk143@m12-controller vs2-]$ ls
 config.yaml               final-viral-combined.fa  iter-0
 final-viral-boundary.tsv  final-viral-score.tsv
-(vs2-env) [hbw18@m12-controller vs2-]$ grep -c "^>" final-viral-combined.fa
+(vs2-env) [mrk143@m12-controller vs2-]$ grep -c "^>" final-viral-combined.fa
 41
-(vs2-env) [hbw18@m12-controller vs2-]$ module load mamba/
-(vs2-env) [hbw18@m12-controller vs2-]$ mamba activate megahit-env
-(megahit-env) [hbw18@m12-controller vs2-]$ seqkit seq -m 5000 final-viral-combined.fa | grep -c “>”
-(megahit-env) [hbw18@m12-controller vs2-]$ seqkit seq -m 5000 final-viral-combined.fa > final-viral-combined_min5kb.fa
+(vs2-env) [mrk143@m12-controller vs2-]$ module load mamba/
+(vs2-env) [mrk143@m12-controller vs2-]$ mamba activate megahit-env
+(megahit-env) [mrk143@m12-controller vs2-]$ seqkit seq -m 5000 final-viral-combined.fa | grep -c “>”
+(megahit-env) [mrk143@m12-controller vs2-]$ seqkit seq -m 5000 final-viral-combined.fa > final-viral-combined_min5kb.fa
 [WARN] you may switch on flag -g/--remove-gaps to remove spaces
-(megahit-env) [hbw18@m12-controller vs2-]$ grep -c "^>" final-viral-combined_min5kb.fa
+(megahit-env) [mrk143@m12-controller vs2-]$ grep -c "^>" final-viral-combined_min5kb.fa
 41
 
 # Install vclust
-(megahit-env) [hbw18@m12-controller vs2-]$ module load mamba
-(megahit-env) [hbw18@m12-controller vs2-]$ mamba create -n votu-env -c bioconda -c conda-forge vclust
-(megahit-env) [hbw18@m12-controller vs2-]$ mamba activate votu-env
+(megahit-env) [mrk143@m12-controller vs2-]$ module load mamba
+(megahit-env) [mrk143@m12-controller vs2-]$ mamba create -n votu-env -c bioconda -c conda-forge vclust
+(megahit-env) [mrk143@m12-controller vs2-]$ mamba activate votu-env
 
 # Prefilter similar genome sequence pairs before conducting pairwise alignments.
-(votu-env) [hbw18@m12-controller vs2-]$ vclust prefilter -i final-viral-combined_min5kb.fa -o fltr.txt
+(votu-env) [mrk143@m12-controller vs2-]$ vclust prefilter -i final-viral-combined_min5kb.fa -o fltr.txt
 
 # Align similar genome sequence pairs and calculate pairwise ANI measures.
-(votu-env) [hbw18@m12-controller vs2-]$ vclust align -i final-viral-combined_min5kb.fa -o ani.tsv --filter fltr.txt
+(votu-env) [mrk143@m12-controller vs2-]$ vclust align -i final-viral-combined_min5kb.fa -o ani.tsv --filter fltr.txt
 
 # Cluster genome sequences based on given ANI measure and minimum threshold (these files were generated in the previous steps)
-(votu-env) [hbw18@m12-controller vs2-]$ vclust cluster -i ani.tsv -o clusters.tsv --ids ani.ids.tsv --metric ani --ani 0.95 --out-repr
+(votu-env) [mrk143@m12-controller vs2-]$ vclust cluster -i ani.tsv -o clusters.tsv --ids ani.ids.tsv --metric ani --ani 0.95 --out-repr
 
 # Make a list of the vOTU headers
-(votu-env) [hbw18@m12-controller vs2-]$ awk '{print $2}' clusters.tsv | sort -u > votu_seeds.txt
+(votu-env) [mrk143@m12-controller vs2-]$ awk '{print $2}' clusters.tsv | sort -u > votu_seeds.txt
 
 # Put these vOTU “seed” sequences into a new file and deactivate mamba.
-(votu-env) [hbw18@m12-controller vs2-]$ mamba deactivate
-(megahit-env) [hbw18@m12-controller vs2-]$ seqkit grep -f votu_seeds.txt final-viral-combined_min5kb.fa > votus_final.fna
+(votu-env) [mrk143@m12-controller vs2-]$ mamba deactivate
+(megahit-env) [mrk143@m12-controller vs2-]$ seqkit grep -f votu_seeds.txt final-viral-combined_min5kb.fa > votus_final.fna
 
 # Check Numbers
-(megahit-env) [hbw18@m12-controller vs2-]$ wc -l votu_seeds.txt
+(megahit-env) [mrk143@m12-controller vs2-]$ wc -l votu_seeds.txt
 42 votu_seeds.txt
-(megahit-env) [hbw18@m12-controller vs2-]$ grep -c ">" votus_final.fna
+(megahit-env) [mrk143@m12-controller vs2-]$ grep -c ">" votus_final.fna
 41
 
 # Edit the text to take out header (which was messing up the count)
-(megahit-env) [hbw18@m12-controller vs2-]$ nano votu_seeds.txt
-(megahit-env) [hbw18@m12-controller vs2-]$ wc -l votu_seeds.txt
+(megahit-env) [mrk143@m12-controller vs2-]$ nano votu_seeds.txt
+(megahit-env) [mrk143@m12-controller vs2-]$ wc -l votu_seeds.txt
 41 votu_seeds.txt
 
 # 3/24/26
+# Goal: Evaluate genome quality and measure abundance 
 
 # Checkv.
 - completeness, contamination, and provirus trimming
@@ -314,12 +316,12 @@ checkv download_database ./				#make sure you’re in your checkv folder!
 #SBATCH --mail-user=mrk143@georgetown.edu
 
 
-#==== Load checkv program module (students: no need to change) ====
+# Load checkv program module 
 
 module load checkv
 
 
-#==== Set variables, paths, and filenames (students: edit this block!) ====
+# Set variables, paths, and filenames 
 
 CHECKVDB="/home/mrk143/group_project_files/checkv/checkv-db-v1.5"
 
@@ -330,37 +332,28 @@ OUTDIR="/home/mrk143/group_project_files/checkv/${SAMPLE_ID}"
 mkdir -p "${OUTDIR}"
 
 
-#==== run checkv (students: no need to change. The second line is the command) ====
+#  run checkv
 echo "Running CheckV on ${INPUT}"
 checkv end_to_end "${INPUT}" "${OUTDIR}" -d "${CHECKVDB}" -t ${SLURM_CPUS_PER_TASK}
 echo "Done."
 
 
-# Find your results.
-After checkv completes, you’ll see a few files. The information you want to look at is in: 
-quality_summary_votus.tsv.  
-
-Have the note-taker check it out and mention how many “complete” “high quality” or “low quality” you have.
+# Our results.
 32 low quality reads
 8 non determined reads
 1 complete read
 
-Next - grab the pooled vOTUs from the buckett:  
+This is expected since a lot of viral contigs are incomplete in environmental samples.
+
+# Grab votus and put them in class bucket
 
 $ gcloud storage cp gs://gu-biology-dept-class/ClassProject/votus_10kb_6samples.fna [location]
 These consist of the class’s virsorter contigs, filtered for >10kb, and clustered.
 
 #  Running bowtie2 + samtools
-Purpose: Map trimmed reads back to the vOTU reference to measure abundance (coverage).
-
-Create a bowtie2 directory for yourself.
-
-Copy the votu file (votus_10kb_6samples.fna) into this directory. 
-
-Find your “trimmed reads” and note the full path names for R1 and R2.
+Goal: Map trimmed reads back to the vOTU reference to measure abundance and coverage.
 
 # Build your index with bowtie2 
-
 Load bowtie2. 
 
 $ srun --pty bash
@@ -378,18 +371,18 @@ $ exit
 #SBATCH --time=8:00:00                                
 #SBATCH --mem=16G                        
 
-#---------SET UP----------
+# Set Up
 SAMPLE=”sample3_mrk143”  	#whatever your sample number is!
 INDEX="home/mrk143/group_project_files/bowtie2/votu_index"
 OUTPUTDIR="home/mrk143/group_project_files/bowtie2/${SAMPLE}"
 
-#--------- LOAD MODULES ----------
+# Load Modules
 module purge
 module load bowtie2/2.5.4
 
-#--------- RUN BOWTIE2 AND PIPE TO SAMTOOLS ----------
+# Run BOWTIE2 and Pipe to Samtools
 
-#First make output and log directories; move into OUTPUTDIR
+# First make output and log directories; move into OUTPUTDIR
 mkdir -p "${OUTPUTDIR}"
 cd "${OUTPUTDIR}"
 mkdir -p logs
@@ -401,7 +394,7 @@ bowtie2 -p 8 -x "${INDEX}" -1 "/home/mrk143/group_project_files/project_reads_tr
 
 echo "Finished running bowtie2 and performing compression"
 
-#---------sort and index files
+# Sort and index files
 echo "Sorting"
 samtools sort "${SAMPLE}.bam" > "${SAMPLE}_sorted.bam"
 
@@ -410,12 +403,7 @@ samtools index "${SAMPLE}_sorted.bam"
 
 echo "Finished ${SAMPLE}"
 
-
-
-
 # Important: Upload all your bowtie output files to bucket!!! 
-
-Put into class project directory and make sure they’re labeled (e.g., “sample2_mrk_sorted.bam”)!!!!
 
 $ gcloud storage cp [file] gs://gu-biology-dept-class/ClassProject/bam
    
