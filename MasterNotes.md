@@ -180,7 +180,54 @@ rm -rf db
 visorter setup -d db -j 4
 
 # Create Slurm Script for running virsorter 
+#!/bin/bash
+#SBATCH --job-name=virsorter_mrk143
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=20G
+#SBATCH --time=03:00:00
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=mrk143@georgetown.edu
+#SBATCH --output=/home/mrk143/group_project_files/logs/virsorter.%j.out
+#SBATCH --error=/home/mrk143/group_project_files/logs/virsorter.%j.err
 
+# ==== Load mamba ====
+module load mamba
+source $(mamba info --base)/etc/profile.d/conda.sh
+
+# Activate the environment where VirSorter2 was installed
+mamba activate vs2-env
+
+# ==== Set paths and filenames ====
+# directory where MEGAHIT output is
+INDIR=/home/mrk143/group_project_files/megahit/mrk143_megahit_out
+
+# directory where VirSorter2 output will go
+OUTROOT=/home/mrk143/group_project_files/virsorter
+mkdir -p "${OUTROOT}"
+
+# basic sample name
+SAMPLE_ID=sample3_mrk143
+
+# contig file from MEGAHIT
+INPUT="${INDIR}/final.contigs.fa"
+
+# output folder
+OUTDIR="${OUTROOT}/vs2-${SAMPLE_ID}"
+mkdir -p "${OUTDIR}"
+
+# ==== Run VirSorter2 ====
+echo "Running VirSorter2 on ${INPUT}"
+
+virsorter run \
+  -w "${OUTDIR}" \
+  -i "${INPUT}" \
+  --keep-original-seq \
+  --include-groups dsDNAphage,NCLDV,ssDNA \
+  --min-length 5000 \
+  -j ${SLURM_CPUS_PER_TASK}
+
+echo "Done."
 
 # Find your results.
 (vs2-env) [hbw18@m12-controller ~]$ cd bioinfoproject
