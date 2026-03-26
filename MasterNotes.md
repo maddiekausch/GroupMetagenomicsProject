@@ -340,7 +340,42 @@ module load checkv						#its available as a module on the HPC
 checkv download_database ./				#make sure you’re in your checkv folder!
 
 # Slurm script for checkv
-INPUT
+
+#!/bin/bash
+#SBATCH --job-name=checkv
+#SBATCH --output=/home/mrk143/group_project_files/logs/checkv-%j.out
+#SBATCH --error=/home/mrk143/group_project_files/logs/checkv-%j.err
+#SBATCH --time=03:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=16G
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=mrk143@georgetown.edu
+
+
+#==== Load checkv program module (students: no need to change) ====
+
+module load checkv
+
+
+#==== Set variables, paths, and filenames (students: edit this block!) ====
+
+CHECKVDB="/home/mrk143/group_project_files/checkv/checkv-db-v1.5"
+
+SAMPLE_ID="vOTUs"
+INPUT="/home/mrk143/group_project_files/votus/votus_final.fna"
+OUTDIR="/home/mrk143/group_project_files/checkv/${SAMPLE_ID}"
+
+mkdir -p "${OUTDIR}"
+
+
+#==== run checkv (students: no need to change. The second line is the command) ====
+echo "Running CheckV on ${INPUT}"
+checkv end_to_end "${INPUT}" "${OUTDIR}" -d "${CHECKVDB}" -t ${SLURM_CPUS_PER_TASK}
+echo "Done."
+
+
 # Find your results.
 After checkv completes, you’ll see a few files. The information you want to look at is in: 
 quality_summary_votus.tsv.  
@@ -374,7 +409,49 @@ $ bowtie2-build votus_10kb_6samples.fna votu_index
 $ exit
 
 # slurm script for bowtie2
-INPUT
+#!/bin/bash
+#SBATCH --job name=bowtie2_vOTUs                 
+#SBATCH --output=/home/mrk143/group_project_files/logs/bowtie-%j.out
+#SBATCH --error=/home/mrk143/group_project_files/logs/bowtie-%j.err
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=mrk143@georgetown.edu
+#SBATCH --time=8:00:00                                
+#SBATCH --mem=16G                        
+
+#---------SET UP----------
+SAMPLE=”sample3_mrk143”  	#whatever your sample number is!
+INDEX="home/mrk143/group_project_files/bowtie2/votu_index"
+OUTPUTDIR="home/mrk143/group_project_files/bowtie2/${SAMPLE}"
+
+#--------- LOAD MODULES ----------
+module purge
+module load bowtie2/2.5.4
+
+#--------- RUN BOWTIE2 AND PIPE TO SAMTOOLS ----------
+
+#First make output and log directories; move into OUTPUTDIR
+mkdir -p "${OUTPUTDIR}"
+cd "${OUTPUTDIR}"
+mkdir -p logs
+
+echo "Running bowtie2 on sample ${SAMPLE}"
+
+bowtie2 -p 8 -x "${INDEX}" -1 "/home/mrk143/group_project_files/project_reads_trimmed/R1_paired_clean.fq.gz" -2 "/home/mrk143/group_project_files/project_reads_trimmed/R2_paired_clean.fq.gz" \
+| samtools view -bS - > "${SAMPLE}.bam"
+
+echo "Finished running bowtie2 and performing compression"
+
+#---------sort and index files
+echo "Sorting"
+samtools sort "${SAMPLE}.bam" > "${SAMPLE}_sorted.bam"
+
+echo "Indexing"
+samtools index "${SAMPLE}_sorted.bam"
+
+echo "Finished ${SAMPLE}"
+
+
+
 
 # Important: Upload all your bowtie output files to bucket!!! 
 
