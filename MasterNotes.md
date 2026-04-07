@@ -51,6 +51,9 @@ gsutil cp raw/*.fastq.gz gs://gu-biology-dept-class/group3/raw/
 
 # RUNFASTQ ON RAW FILES
 FastQC generates an HTML quality report for each FASTQ file. Key things we're checking: per-base quality scores (Phred > or equal to 20 across most of the read), adapter content, and sequence length distribution. These metrics tell us what Trimmmomatic settings to use. 
+
+```bash
+
 # Enter interactive mode on a compute node
 srun --pty bash
 
@@ -65,6 +68,8 @@ fastqc -o fastqc_out raw/*.fastq.gz
 
 # Check outputs appeared
 ls fastqc_out
+
+```
 
 # RUN TRIMMOMATIC
 Trimmomatic trims adapter sequences and low-quality bases from paired-end reads. Key parameters we used:
@@ -108,11 +113,12 @@ We successfully trimmed the data, and we can now use the trimmed data for assemb
 # GOAL: Bog frozen rep A (SAMN08784152), assemble contigs from trimmed reads
 Assembly takes the trimmed short reads and reconstructs longer genomic sequences (contigs) by finding overlapping k-mer patterns. We're using MEGAHIT which is well suited for metagenomes because it uses a succinct de Bruijn graph and is memory efficient. This is important when sample contains DNA from many different organisms at varying abundances. 
 
+```bash 
 # INSTALL MEGAHIT
 module load mamba/
 Create environment with megahit 
 mamba create -y -n megahit-env -c conda-forge -c bioconda megahit
-
+```
 # WRITE SLURM SCRIPT FOR MEGAHIT
 We request 8 CPUs and 32 GB RAM. MEGAHIT can be memory intensive for large metagenomes, but 32G should be sufficient for this sample size. The job runs for up to 3 hours, which is conservative for this data volume. 
 
