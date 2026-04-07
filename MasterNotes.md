@@ -79,6 +79,7 @@ Trimmomatic trims adapter sequences and low-quality bases from paired-end reads.
 - Minlen:50: discards reads shorter than 50 bp after trimming. Too short reads don't assemble well
 Output is four files: paired R1, unpaired R1, paired R2, unpaired R2. We'll only use the paired files for assembly.
 
+```bash
 #!/bin/bash
 #SBATCH --mail-type=END,FAIL --mail-user=mrk143@georgetown.edu # send this to the email when the slurm is complete 
 #SBATCH --job-name= "project_trim"
@@ -106,6 +107,7 @@ trimmomatic PE -threads $SLURM_CPUS_PER_TASK \
   $OUTDIR/R2_paired.fq.gz  $OUTDIR/R2_unpaired.fq.gz \
   ILLUMINACLIP:/home/mrk143/TruSeq3-PE.fa:2:30:10 \
   SLIDINGWINDOW:4:20 MINLEN:50
+```
 
 We successfully trimmed the data, and we can now use the trimmed data for assembly. 
 
@@ -123,6 +125,7 @@ mamba create -y -n megahit-env -c conda-forge -c bioconda megahit
 We request 8 CPUs and 32 GB RAM. MEGAHIT can be memory intensive for large metagenomes, but 32G should be sufficient for this sample size. The job runs for up to 3 hours, which is conservative for this data volume. 
 
 slurm script:
+```bash
 #!/bin/bash
 #SBATCH --job-name= megahit_SRR37587558	# how job appears in the queue
 #SBATCH --nodes=1
@@ -163,16 +166,17 @@ megahit \
   -o ${OUTDIR}
 
 echo "Done. Contigs should be in: ${OUTDIR}/final.contigs.fa"
-
+```
 
 # CHECK OUTPUT
 After assembly, we check that the output file exists and get basic stats. grep -c ">" counts FASTA headers = number of contigs. SeqKit gives us more detailed stats including N50, which is a standard assembly quality metric: the length at which 50% of all assembled bases are contained in contigs of that size or loneger. Higher is better. 
 
-Navigate to output folder
+```bash
+#Navigate to output folder
 cd /home/mrk143/project/megahit/bog_frozen_A_megahit_out
-Should see: final.contigs.fa, log, and intermediate files
+#Should see: final.contigs.fa, log, and intermediate files
 ls
-Count how many contigs assembled (lines starting with >)
+#Count how many contigs assembled (lines starting with >)
 grep -c ">" final.contigs.fa
 Peek at first few contigs
 head -20 final.contigs.fa
@@ -191,17 +195,20 @@ seqkit stats -a final.contigs.fa
 Number of Contigs: 73,883
 Total Length: Around 41.5 MB
 Average Length: 562 BP 
-N50: 497 
+N50: 497
+```
 
 The low N50 (497bp) tells us most contigs are quite short. This is expected for environmental metagenomes, where reads from many organisms at varying abundances are assembled together. Short, fragmented contigs are common when coverage is uneven for the Viral identification step, we will filter to contigs greater than or equal to 5,000 bp since VirSorter2 requires longer sequences to reliably identify viral signals. 
 
+```bash
+
 #  UPLOAD ASSEMBLY TO CLASS BUCKET
 gsutil cp megahit/bog_frozen_A_megahit_out/final.contigs.fa gs://gu-biology-dept-class/group3/megahit/
-
+```
 # 3/19/26 
 # GOAL: Identify viral sequences and group them into different viral populations, want to run Virosorter 
 VirSorter2 is a machine-learning-based tool that classifies contigs as viral or non-viral. It uses hallmark viral genes, sequence features, and gene content to score each contig. We then cluster the viral sequences into vOTUs (viral Operational Taxonomic Units) using vclust. We use 95% ANI (Average Nucleotide Identity) as the species-level cutoff for viruses. 
-
+```bash
 # Load mamba 
 module load mamba
 source $(mamba info --base)/etc/profile.d/conda.sh
@@ -210,10 +217,10 @@ source $(mamba info --base)/etc/profile.d/conda.sh
 mamba activate vs2-env
 rm -rf db
 visorter setup -d db -j 4
-
+```
 # Create Slurm Script for running virsorter 
 Key parameters: --include-groups dsDNAphage, NCLDV, ssDNA are for targeting double-stranded DNA phages, nucleocytoplasmic large DNA viruses, and single-stranded DNA viruses, which are the most relevant groups for this bog metagenome. --min-length 5000 filters out short contigs that don't have enough gene content to reliably classify. --keep-original-seq preserves full contig sequences rather than trimming predicted host regions -- we keep this on because CheckV will do host trimming later. 
-
+```bash
 nano virosorter.batch
 #!/bin/bash
 #SBATCH --job-name=virsorter_mrk143
@@ -263,7 +270,8 @@ virsorter run \
   -j ${SLURM_CPUS_PER_TASK}
 
 echo "Done."
-
+```
+```bash
 # Find your results.
 (vs2-env) [mrk143@m12-controller ~]$ cd bioinfoproject
 (vs2-env) [mrk143@m12-controller bioinfoproject]$ cd virosorter
@@ -280,10 +288,11 @@ final-viral-boundary.tsv  final-viral-score.tsv
 [WARN] you may switch on flag -g/--remove-gaps to remove spaces
 (megahit-env) [mrk143@m12-controller vs2-]$ grep -c "^>" final-viral-combined_min5kb.fa
 41
-
+```
 # Cluster into vOTUs with vclust
 vclust clusters viral genomes by Average Nucleotide Identity (ANI). We use 95% ANI as the species level cutoff (this is standard for viral taxonomy). Workflow--> prefilter (fast k-mer screening to find candidate pairs) --> align (compute pairwise ANI) --> cluster. Output seeds are the representative sequences for each cluster. i.e., one sequence per vOTU. 
 
+```bash
 # Install vclust
 (megahit-env) [mrk143@m12-controller vs2-]$ module load mamba
 (megahit-env) [mrk143@m12-controller vs2-]$ mamba create -n votu-env -c bioconda -c conda-forge vclust
@@ -315,7 +324,7 @@ vclust clusters viral genomes by Average Nucleotide Identity (ANI). We use 95% A
 (megahit-env) [mrk143@m12-controller vs2-]$ nano votu_seeds.txt
 (megahit-env) [mrk143@m12-controller vs2-]$ wc -l votu_seeds.txt
 41 votu_seeds.txt
-
+```
 Note-- wc -l votu_seeds.txt initially returned 42 because the file had a header line. We edited the file with nano to remove the header. 
 # 3/24/26
 # Goal: Evaluate genome quality and measure abundance 
@@ -340,12 +349,12 @@ Assign quality tiers: it classifies each sequence into quality categories
 
 You’ll need your file with the vOTUs. (note its full path)
 Set up a directory called “checkv”, move into that directory to download the database in the next step.
-
+```bash
 module load checkv						#its available as a module on the HPC
 checkv download_database ./				#make sure you’re in your checkv folder!
-
+```
 # Slurm script for checkv
-
+```bash
 #!/bin/bash
 #SBATCH --job-name=checkv
 #SBATCH --output=/home/mrk143/group_project_files/logs/checkv-%j.out
@@ -380,6 +389,7 @@ echo "Running CheckV on ${INPUT}"
 checkv end_to_end "${INPUT}" "${OUTDIR}" -d "${CHECKVDB}" -t ${SLURM_CPUS_PER_TASK}
 echo "Done."
 
+```
 
 # Our results.
 32 low quality reads
@@ -389,8 +399,9 @@ echo "Done."
 Having only 1 complete genome out of 41 vOTUs is expected and normal because the environmental samples are sequenced at mixed, uneven coverage and most viral genomes are only partially recovered. Low-quality doesn't mean unusuable, they can be used for taxonomy and abundance analysis. The 1 complete genome is particularly valuable. 
 
 # Grab votus and put them in class bucket
-
+```bash
 $ gcloud storage cp gs://gu-biology-dept-class/ClassProject/votus_10kb_6samples.fna [location]
+```
 These consist of the class’s virsorter contigs, filtered for >10kb, and clustered.
 
 The class combined vOTUs from all 6 samples and filtered for greater than 10 kb. Now map our trimmed reads back to this combined reference to measure the abundance of each vOTU in our specific sample. Tells us which viruses are actually present and at what relative abundance. Bowtie2 does the read alignment, samtools converts, sorts, and indexes the output for downstream analysis. 
@@ -401,15 +412,15 @@ Goal: Map trimmed reads back to the vOTU reference to measure abundance and cove
 # Build your index with bowtie2 
 Before mapping reads, Bowtie2 requires a pre-built index of the reference sequences. Allows fast lookups instead of scanning every sequence. Only needs to be done once per reference file. 
 Load bowtie2. 
-
+```bash
 $ srun --pty bash
 $ module load bowtie2
 $ bowtie2-build votus_10kb_6samples.fna votu_index
 $ exit
-
+```
 # slurm script for bowtie2
 We pipe Bowtie2 output directly into samtools to convert from SAM to BAM (compressed binary) format. This avoids writing a large intermediate SAM file to disk. We then sort and index the BAM file, which is required for any downstream coverage or abundance calculations. 
-
+```bash
 #!/bin/bash
 #SBATCH --job name=bowtie2_vOTUs                 
 #SBATCH --output=/home/mrk143/group_project_files/logs/bowtie-%j.out
@@ -443,6 +454,7 @@ bowtie2 -p 8 -x "${INDEX}" -1 "/home/mrk143/group_project_files/project_reads_tr
 echo "Finished running bowtie2 and performing compression"
 
 # Sort and index files
+
 echo "Sorting"
 samtools sort "${SAMPLE}.bam" > "${SAMPLE}_sorted.bam"
 
@@ -450,11 +462,11 @@ echo "Indexing"
 samtools index "${SAMPLE}_sorted.bam"
 
 echo "Finished ${SAMPLE}"
-
+```
 # Important: Upload all your bowtie output files to bucket!!! 
-
+```bash
 $ gcloud storage cp [file] gs://gu-biology-dept-class/ClassProject/bam
-   
+```
 # 4/7/26
 # Figure results of heatmap
 [heatmap.bioinformatics.pdf](https://github.com/user-attachments/files/26542889/heatmap.bioinformatics.pdf)
