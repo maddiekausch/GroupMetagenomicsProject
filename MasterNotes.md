@@ -190,13 +190,13 @@ mamba install -c bioconda seqkit
 SeqKit is a fast toolkit for FASTA/FASTQ manipulation. the -a flag gives all statistics including N50, min/max length, and GC content. 
 
 seqkit stats -a final.contigs.fa
-
+```
 # Results from the SeqKit -> we found a lot of contigs from this sample, the low N50 shows that we had shorter contigs
 Number of Contigs: 73,883
 Total Length: Around 41.5 MB
 Average Length: 562 BP 
 N50: 497
-```
+
 
 The low N50 (497bp) tells us most contigs are quite short. This is expected for environmental metagenomes, where reads from many organisms at varying abundances are assembled together. Short, fragmented contigs are common when coverage is uneven for the Viral identification step, we will filter to contigs greater than or equal to 5,000 bp since VirSorter2 requires longer sequences to reliably identify viral signals. 
 
