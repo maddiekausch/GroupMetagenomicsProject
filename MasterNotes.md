@@ -9,6 +9,7 @@ This section covers downloading raw sequencing reads from NCBI's SRA (Sequence R
 # Download fastq files...
 We use NCBI's SRA Toolkit (prefetch and fasterq-dump) to download and convert reads. prefetch downloads the compresssed .sra file, and fasterq-dump converts it to the paired-end FASTQ files we need. We gzip compress them afterward to save disk space. 
 
+```bash
 # Go to home directory
 cd ~
 
@@ -45,6 +46,8 @@ mkdir cleaned_reads
 
 # Upload raw data to the class bucket
 gsutil cp raw/*.fastq.gz gs://gu-biology-dept-class/group3/raw/
+
+```
 
 # RUNFASTQ ON RAW FILES
 FastQC generates an HTML quality report for each FASTQ file. Key things we're checking: per-base quality scores (Phred > or equal to 20 across most of the read), adapter content, and sequence length distribution. These metrics tell us what Trimmmomatic settings to use. 
