@@ -407,4 +407,7 @@ echo "Finished ${SAMPLE}"
 
 $ gcloud storage cp [file] gs://gu-biology-dept-class/ClassProject/bam
    
+# 4/7/26
+# Figure results of heatmap
+
 
