@@ -118,7 +118,7 @@ Assembly takes the trimmed short reads and reconstructs longer genomic sequences
 ```bash 
 # INSTALL MEGAHIT
 module load mamba/
-Create environment with megahit 
+# Create environment with megahit 
 mamba create -y -n megahit-env -c conda-forge -c bioconda megahit
 ```
 # WRITE SLURM SCRIPT FOR MEGAHIT
@@ -178,7 +178,7 @@ cd /home/mrk143/project/megahit/bog_frozen_A_megahit_out
 ls
 #Count how many contigs assembled (lines starting with >)
 grep -c ">" final.contigs.fa
-Peek at first few contigs
+#Peek at first few contigs
 head -20 final.contigs.fa
 
 # INSTALL SEQKIT (run on login node, only need to do once)
@@ -187,7 +187,7 @@ mamba activate megahit-env
 mamba install -c bioconda seqkit
 
 # RUN SEQKIT STATS ON ASSEMBLY
-SeqKit is a fast toolkit for FASTA/FASTQ manipulation. the -a flag gives all statistics including N50, min/max length, and GC content. 
+# SeqKit is a fast toolkit for FASTA/FASTQ manipulation. the -a flag gives all statistics including N50, min/max length, and GC content. 
 
 seqkit stats -a final.contigs.fa
 ```
@@ -196,7 +196,6 @@ Number of Contigs: 73,883
 Total Length: Around 41.5 MB
 Average Length: 562 BP 
 N50: 497
-
 
 The low N50 (497bp) tells us most contigs are quite short. This is expected for environmental metagenomes, where reads from many organisms at varying abundances are assembled together. Short, fragmented contigs are common when coverage is uneven for the Viral identification step, we will filter to contigs greater than or equal to 5,000 bp since VirSorter2 requires longer sequences to reliably identify viral signals. 
 
@@ -222,6 +221,9 @@ visorter setup -d db -j 4
 Key parameters: --include-groups dsDNAphage, NCLDV, ssDNA are for targeting double-stranded DNA phages, nucleocytoplasmic large DNA viruses, and single-stranded DNA viruses, which are the most relevant groups for this bog metagenome. --min-length 5000 filters out short contigs that don't have enough gene content to reliably classify. --keep-original-seq preserves full contig sequences rather than trimming predicted host regions -- we keep this on because CheckV will do host trimming later. 
 ```bash
 nano virosorter.batch
+
+# slurm script
+
 #!/bin/bash
 #SBATCH --job-name=virsorter_mrk143
 #SBATCH --nodes=1
@@ -273,20 +275,20 @@ echo "Done."
 ```
 ```bash
 # Find your results.
-(vs2-env) [mrk143@m12-controller ~]$ cd bioinfoproject
-(vs2-env) [mrk143@m12-controller bioinfoproject]$ cd virosorter
-(vs2-env) [mrk143@m12-controller virosorter]$ cd vs2-
-(vs2-env) [mrk143@m12-controller vs2-]$ ls
+(vs2-env) [mrk143@m12-controller ~]$ cd group_project_files
+(vs2-env) [mrk143@m12-controller group_project_files]$ cd virsorter
+(vs2-env) [mrk143@m12-controller virsorter]$ cd vs2-sample3_mrk143
+(vs2-env) [mrk143@m12-controller vs2-sample3_mrk143]$ ls
 config.yaml               final-viral-combined.fa  iter-0
 final-viral-boundary.tsv  final-viral-score.tsv
-(vs2-env) [mrk143@m12-controller vs2-]$ grep -c "^>" final-viral-combined.fa
+(vs2-env) [mrk143@m12-controller vs2-sample3_mrk143]$ grep -c "^>" final-viral-combined.fa
 41
-(vs2-env) [mrk143@m12-controller vs2-]$ module load mamba/
-(vs2-env) [mrk143@m12-controller vs2-]$ mamba activate megahit-env
-(megahit-env) [mrk143@m12-controller vs2-]$ seqkit seq -m 5000 final-viral-combined.fa | grep -c “>”
-(megahit-env) [mrk143@m12-controller vs2-]$ seqkit seq -m 5000 final-viral-combined.fa > final-viral-combined_min5kb.fa
+(vs2-env) [mrk143@m12-controller vs2-sample3_mrk143]$ module load mamba/
+(vs2-env) [mrk143@m12-controller vs2-sample3_mrk143]$ mamba activate megahit-env
+(megahit-env) [mrk143@m12-controller vs2-sample3_mrk143]$ seqkit seq -m 5000 final-viral-combined.fa | grep -c “>”
+(megahit-env) [mrk143@m12-controller vs2-sample3_mrk143]$ seqkit seq -m 5000 final-viral-combined.fa > final-viral-combined_min5kb.fa
 [WARN] you may switch on flag -g/--remove-gaps to remove spaces
-(megahit-env) [mrk143@m12-controller vs2-]$ grep -c "^>" final-viral-combined_min5kb.fa
+(megahit-env) [mrk143@m12-controller vs2-sample3_mrk143]$ grep -c "^>" final-viral-combined_min5kb.fa
 41
 ```
 # Cluster into vOTUs with vclust
@@ -294,47 +296,45 @@ vclust clusters viral genomes by Average Nucleotide Identity (ANI). We use 95% A
 
 ```bash
 # Install vclust
-(megahit-env) [mrk143@m12-controller vs2-]$ module load mamba
-(megahit-env) [mrk143@m12-controller vs2-]$ mamba create -n votu-env -c bioconda -c conda-forge vclust
-(megahit-env) [mrk143@m12-controller vs2-]$ mamba activate votu-env
+(megahit-env) [mrk143@m12-controller vs2-sample3_mrk143]$ module load mamba
+(megahit-env) [mrk143@m12-controller vs2-sample3_mrk143]$ mamba create -n votu-env -c bioconda -c conda-forge vclust
+(megahit-env) [mrk143@m12-controller vs2-sample3_mrk143]$ mamba activate votu-env
 
 # Prefilter similar genome sequence pairs before conducting pairwise alignments.
-(votu-env) [mrk143@m12-controller vs2-]$ vclust prefilter -i final-viral-combined_min5kb.fa -o fltr.txt
+(votu-env) [mrk143@m12-controller vs2-sample3_mrk143]$ vclust prefilter -i final-viral-combined_min5kb.fa -o fltr.txt
 
 # Align similar genome sequence pairs and calculate pairwise ANI measures.
-(votu-env) [mrk143@m12-controller vs2-]$ vclust align -i final-viral-combined_min5kb.fa -o ani.tsv --filter fltr.txt
+(votu-env) [mrk143@m12-controller vs2-sample3_mrk143]$ vclust align -i final-viral-combined_min5kb.fa -o ani.tsv --filter fltr.txt
 
 # Cluster genome sequences based on given ANI measure and minimum threshold (these files were generated in the previous steps)
-(votu-env) [mrk143@m12-controller vs2-]$ vclust cluster -i ani.tsv -o clusters.tsv --ids ani.ids.tsv --metric ani --ani 0.95 --out-repr
+(votu-env) [mrk143@m12-controller vs2-sample3_mrk143]$ vclust cluster -i ani.tsv -o clusters.tsv --ids ani.ids.tsv --metric ani --ani 0.95 --out-repr
 
 # Make a list of the vOTU headers
-(votu-env) [mrk143@m12-controller vs2-]$ awk '{print $2}' clusters.tsv | sort -u > votu_seeds.txt
+(votu-env) [mrk143@m12-controller vs2-sample3_mrk143]$ awk '{print $2}' clusters.tsv | sort -u > votu_seeds.txt
 
 # Put these vOTU “seed” sequences into a new file and deactivate mamba.
-(votu-env) [mrk143@m12-controller vs2-]$ mamba deactivate
-(megahit-env) [mrk143@m12-controller vs2-]$ seqkit grep -f votu_seeds.txt final-viral-combined_min5kb.fa > votus_final.fna
+(votu-env) [mrk143@m12-controller vs2-sample3_mrk143]$ mamba deactivate
+(megahit-env) [mrk143@m12-controller vs2-sample3_mrk143]$ seqkit grep -f votu_seeds.txt final-viral-combined_min5kb.fa > votus_final.fna
 
 # Check Numbers
-(megahit-env) [mrk143@m12-controller vs2-]$ wc -l votu_seeds.txt
+(megahit-env) [mrk143@m12-controller vs2-sample3_mrk143]$ wc -l votu_seeds.txt
 42 votu_seeds.txt
-(megahit-env) [mrk143@m12-controller vs2-]$ grep -c ">" votus_final.fna
+(megahit-env) [mrk143@m12-controller vs2-sample3_mrk143]$ grep -c ">" votus_final.fna
 41
 
 # Edit the text to take out header (which was messing up the count)
-(megahit-env) [mrk143@m12-controller vs2-]$ nano votu_seeds.txt
-(megahit-env) [mrk143@m12-controller vs2-]$ wc -l votu_seeds.txt
+(megahit-env) [mrk143@m12-controller vs2-sample3_mrk143]$ nano votu_seeds.txt
+(megahit-env) [mrk143@m12-controller vs2-sample3_mrk143]$ wc -l votu_seeds.txt
 41 votu_seeds.txt
 ```
 Note-- wc -l votu_seeds.txt initially returned 42 because the file had a header line. We edited the file with nano to remove the header. 
+
 # 3/24/26
 # Goal: Evaluate genome quality and measure abundance 
-Viral contigs in environmental metagenomes are often incomplete, chimeric, or contain host DNA (proviruses or phages integrated into bacterial chromosomes). CheckV addressed this by :
-- estimating completeness by comparing each contig to a database of complete viral genomes using amino-acid identity and alignment coverage.
-- detecting and trimming host regions from proviruses (using gene content, GC content, and other signals).
-- identifying closed/complete genomes by looking for terminal repeats
-- assigning quality tiers: complete, high quality (over 90% complete), medium quality (50-90%), low quality (less than 50%) or undetermined
-input: our vOTU representative sequences from the clustering step. 
-# Checkv.
+Viral contigs in environmental metagenomes are often incomplete, chimeric, or contain host DNA (proviruses or phages integrated into bacterial chromosomes). CheckV addressed this by estimating completeness by comparing each contig to a database of complete viral genomes using amino-acid identity and alignment coverage. It detected and trimmed host regions from proviruses (using gene content, GC content, and other signals). It also identified closed/complete genomes by looking for terminal repeats and assigned quality tiers: complete, high quality (over 90% complete), medium quality (50-90%), low quality (less than 50%) or undetermined.
+Input: our vOTU representative sequences from the clustering step. 
+
+# Checkv
 - completeness, contamination, and provirus trimming
 - Viral contigs can be partial, chimeric, or include host DNA.  CheckV evaluates the quality of each viral contig and removes host segments from proviruses.
 
@@ -367,11 +367,9 @@ checkv download_database ./				#make sure you’re in your checkv folder!
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=mrk143@georgetown.edu
 
-
 # Load checkv program module 
 
 module load checkv
-
 
 # Set variables, paths, and filenames 
 
@@ -382,7 +380,6 @@ INPUT="/home/mrk143/group_project_files/votus/votus_final.fna"
 OUTDIR="/home/mrk143/group_project_files/checkv/${SAMPLE_ID}"
 
 mkdir -p "${OUTDIR}"
-
 
 #  run checkv
 echo "Running CheckV on ${INPUT}"
@@ -396,7 +393,7 @@ echo "Done."
 8 non determined reads
 1 complete read
 
-Having only 1 complete genome out of 41 vOTUs is expected and normal because the environmental samples are sequenced at mixed, uneven coverage and most viral genomes are only partially recovered. Low-quality doesn't mean unusuable, they can be used for taxonomy and abundance analysis. The 1 complete genome is particularly valuable. 
+Having only 1 complete genome out of 41 vOTUs is expected because the environmental samples are sequenced at mixed, uneven coverage and most viral genomes are only partially recovered. Low-quality reads can still be used for taxonomy and abundance analysis. The 1 complete genome is particularly valuable. 
 
 # Grab votus and put them in class bucket
 ```bash
@@ -411,6 +408,7 @@ Goal: Map trimmed reads back to the vOTU reference to measure abundance and cove
 
 # Build your index with bowtie2 
 Before mapping reads, Bowtie2 requires a pre-built index of the reference sequences. Allows fast lookups instead of scanning every sequence. Only needs to be done once per reference file. 
+
 Load bowtie2. 
 ```bash
 $ srun --pty bash
@@ -463,9 +461,9 @@ samtools index "${SAMPLE}_sorted.bam"
 
 echo "Finished ${SAMPLE}"
 ```
-# Important: Upload all your bowtie output files to bucket!!! 
+# Upload all  bowtie output files to bucket
 ```bash
-$ gcloud storage cp [file] gs://gu-biology-dept-class/ClassProject/bam
+$ gcloud storage cp home/mrk143/group_project_files/bowtie2/sample3_mrk143/sample3_mrk143.bam gs://gu-biology-dept-class/ClassProject/bam
 ```
 # 4/7/26
 # Figure results of heatmap
