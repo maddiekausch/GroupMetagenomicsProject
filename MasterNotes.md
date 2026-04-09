@@ -466,6 +466,7 @@ echo "Finished ${SAMPLE}"
 $ gcloud storage cp home/mrk143/group_project_files/bowtie2/sample3_mrk143/sample3_mrk143.bam gs://gu-biology-dept-class/ClassProject/bam
 ```
 # 4/7/26
+Goal: 
 # Figure results of heatmap
 [heatmap.bioinformatics.pdf](https://github.com/user-attachments/files/26542889/heatmap.bioinformatics.pdf)
 [per-sampleviraldiversity.pdf](https://github.com/user-attachments/files/26542888/per-sampleviraldiversity.pdf)
