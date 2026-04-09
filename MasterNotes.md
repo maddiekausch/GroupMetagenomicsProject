@@ -466,8 +466,16 @@ echo "Finished ${SAMPLE}"
 $ gcloud storage cp home/mrk143/group_project_files/bowtie2/sample3_mrk143/sample3_mrk143.bam gs://gu-biology-dept-class/ClassProject/bam
 ```
 # 4/7/26
-Goal: 
+Goal: Create ecological data visualizations to better understand the diversity of our samples.
+
+# Bar graphs for Richness and Shannon Diversity
+The votu richness graph helps us compare how many unique vOTUs present are in each sample. The shannon diversity measures both richness + evenness in each sample, which shows how evenly taxa are distributed within each sample.
+
+[per-sampleviraldiversity.pdf](https://github.com/user-attachments/files/26542888/per-sampleviraldiversity.pdf)
+<img width="1410" height="1312" alt="Richness Bargraph" src="https://github.com/user-attachments/assets/b41e3062-2dde-4fc9-bf9e-85dcfd981341" />
+<img width="1410" height="1312" alt="Shannon Graph" src="https://github.com/user-attachments/assets/1106b5d1-12bd-4b93-b5ec-b4fe4230f8e9" />
+
 # Figure results of heatmap
 [heatmap.bioinformatics.pdf](https://github.com/user-attachments/files/26542889/heatmap.bioinformatics.pdf)
-[per-sampleviraldiversity.pdf](https://github.com/user-attachments/files/26542888/per-sampleviraldiversity.pdf)
+
 
