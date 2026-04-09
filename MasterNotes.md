@@ -1,8 +1,8 @@
 
 ## Master Notes for project
-3/12/2026
+# 3/12/2026
 
-GOAL: We have the Bog frozen rep A (SAMN08784152), and we want to quality check and trim the reads. The product will be used for future analysis. 
+# Goal: We have the Bog frozen rep A (SAMN08784152), and we want to quality check and trim the reads. The product will be used for future analysis. 
 
 This section covers downloading raw sequencing reads from NCBI's SRA (Sequence Read Archive), converting them to FASTQ format, running quality control with FastQC, and trimming low-quality bases with Trimmomatic. These are standard first steps in any metagenomics or genomics workflow. Raw reads from the sequencer often contain adapter sequences, low-quality tails, and other artifacts that need to be removed before assembly. 
 
@@ -466,7 +466,7 @@ echo "Finished ${SAMPLE}"
 $ gcloud storage cp home/mrk143/group_project_files/bowtie2/sample3_mrk143/sample3_mrk143.bam gs://gu-biology-dept-class/ClassProject/bam
 ```
 # 4/7/26
-Goal: Create ecological data visualizations to better understand the diversity of our samples. These graphs were created using R and R studio. 
+# Goal: Create ecological data visualizations to better understand the diversity of our samples. These graphs were created using R and R studio. 
 
 # Bar graphs for Richness and Shannon Diversity
 The votu richness graph helps us compare how many unique vOTUs present are in each sample. The shannon diversity measures both richness + evenness in each sample, which shows how evenly taxa are distributed within each sample.
