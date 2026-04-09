@@ -595,7 +595,7 @@ pheatmap(
 ```
 <img width="549" height="857" alt="heatmap bioinformatics (1)" src="https://github.com/user-attachments/assets/4dcd3379-c5e5-4d3c-b820-b991d5ecbd08" />
 
-Some interpretation of the graphs:
+Some interpretation of the graph:
 - Some vOTUs are in high abundance in specific samples while being absent or rare in others, which indicates strong compositional differences between samples
 -  Some samples share pretty similar viral communities, while others are more distinct. A possible explanation could be due to key dominant taxa affecting others prescence
 
