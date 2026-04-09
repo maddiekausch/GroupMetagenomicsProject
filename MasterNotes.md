@@ -112,7 +112,7 @@ trimmomatic PE -threads $SLURM_CPUS_PER_TASK \
 We successfully trimmed the data, and we can now use the trimmed data for assembly. 
 
 # 3/17/26 
-# GOAL: Bog frozen rep A (SAMN08784152), assemble contigs from trimmed reads
+# Goal: Bog frozen rep A (SAMN08784152), assemble contigs from trimmed reads
 Assembly takes the trimmed short reads and reconstructs longer genomic sequences (contigs) by finding overlapping k-mer patterns. We're using MEGAHIT which is well suited for metagenomes because it uses a succinct de Bruijn graph and is memory efficient. This is important when sample contains DNA from many different organisms at varying abundances. 
 
 ```bash 
@@ -205,7 +205,7 @@ The low N50 (497bp) tells us most contigs are quite short. This is expected for 
 gsutil cp megahit/bog_frozen_A_megahit_out/final.contigs.fa gs://gu-biology-dept-class/group3/megahit/
 ```
 # 3/19/26 
-# GOAL: Identify viral sequences and group them into different viral populations, want to run Virosorter 
+# Goal: Identify viral sequences and group them into different viral populations, want to run Virosorter 
 VirSorter2 is a machine-learning-based tool that classifies contigs as viral or non-viral. It uses hallmark viral genes, sequence features, and gene content to score each contig. We then cluster the viral sequences into vOTUs (viral Operational Taxonomic Units) using vclust. We use 95% ANI (Average Nucleotide Identity) as the species-level cutoff for viruses. 
 ```bash
 # Load mamba 
@@ -469,7 +469,7 @@ $ gcloud storage cp home/mrk143/group_project_files/bowtie2/sample3_mrk143/sampl
 # Goal: Create ecological data visualizations to better understand the diversity of our samples. These graphs were created using R and R studio. 
 
 # Bar graphs for Richness and Shannon Diversity
-The votu richness graph helps us compare how many unique vOTUs present are in each sample. The shannon diversity measures both richness + evenness in each sample, which shows how evenly taxa are distributed within each sample.
+The votu richness graph helps us compare how many unique vOTUs present are in each sample. The shannon diversity measures both richness and evenness in each sample, which shows how evenly taxa are distributed within each sample.
 
 ```bash
 # Install packages. These are required R packages for diversity calculations and plotting.
