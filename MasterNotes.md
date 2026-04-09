@@ -466,16 +466,140 @@ echo "Finished ${SAMPLE}"
 $ gcloud storage cp home/mrk143/group_project_files/bowtie2/sample3_mrk143/sample3_mrk143.bam gs://gu-biology-dept-class/ClassProject/bam
 ```
 # 4/7/26
-Goal: Create ecological data visualizations to better understand the diversity of our samples.
+Goal: Create ecological data visualizations to better understand the diversity of our samples. These graphs were created using R and R studio. 
 
 # Bar graphs for Richness and Shannon Diversity
 The votu richness graph helps us compare how many unique vOTUs present are in each sample. The shannon diversity measures both richness + evenness in each sample, which shows how evenly taxa are distributed within each sample.
 
-[per-sampleviraldiversity.pdf](https://github.com/user-attachments/files/26542888/per-sampleviraldiversity.pdf)
+```bash
+# Install packages. These are required R packages for diversity calculations and plotting.
+install.packages(c("vegan", "pheatmap", "RColorBrewer"))
+
+# Load libraries in order that you can use the packages you just downloaded for data visualization. 
+library(vegan)
+library(pheatmap)
+library(RColorBrewer)
+
+# Read input file. It also import the vOTU abundance table. check.names preserves the original sample names. Important make sure you have set your working directory to where the csv is located. You can change your working directory by going into the session tab on R and then clicking the folder you want as your directory. 
+abund_raw <- read.csv(
+  "votus_12367_coverm_TPM_3votusremoved.csv",
+  header = TRUE,
+  check.names = FALSE)
+
+# Format data into a usable form. This sets the vOTU IDs as row names and remove the non-numeric column.
+rownames(abund_raw) <- abund_raw$Contig
+abund <- abund_raw[, -1]
+
+# Sanity check. This confirms the dimensions and correct labeling of rows (vOTUs) and columns (samples).
+dim(abund)
+head(rownames(abund))
+colnames(abund)
+
+# Transpose matrix. For the graphs we need samples as rows and taxa as columns.
+abund_t <- t(abund)
+
+# Remove empty samples. Exclude samples with zero total abundance to avoid errors.
+abund_t <- abund_t[rowSums(abund_t) > 0, , drop = FALSE]
+
+
+# Calculating Richness. Counts how many taxa are present per sample. 
+richness <- specnumber(abund_t)
+
+# Calculating Shannon Diversity, which is richness and evenness. 
+shannon <- diversity(abund_t, index = "shannon")
+
+# Combine results into one table.
+alpha_div <- data.frame(
+  Sample   = rownames(abund_t),
+  Richness = richness,
+  Shannon  = shannon)
+alpha_div
+
+# Plot richness per sample
+barplot(
+  alpha_div$Richness,
+  names.arg = alpha_div$Sample,
+  las = 2,
+  ylab = "vOTU richness (count)",
+  main = "Per-sample viral richness")
+
+# Plot Shannon diversity per sample
+barplot(
+  alpha_div$Shannon,
+  names.arg = alpha_div$Sample,
+  las = 2,
+  ylab = "Shannon diversity",
+  main = "Per-sample viral diversity")
+
+```
 <img width="1410" height="1312" alt="Richness Bargraph" src="https://github.com/user-attachments/assets/b41e3062-2dde-4fc9-bf9e-85dcfd981341" />
 <img width="1410" height="1312" alt="Shannon Graph" src="https://github.com/user-attachments/assets/1106b5d1-12bd-4b93-b5ec-b4fe4230f8e9" />
 
+Some interpretation of the graphs: 
+- Richness varied substantially across samples
+- Large richness does not always mean high Shannon Diversity. This could be beacause despite high richness, the community can be dominated by a few taxa. - Samples with medium richness exhibited higher Shannon values (more even distribution)
+
 # Figure results of heatmap
+Heatmaps visualize which taxa are present and how abundant they are across samples. 
+```bash
+
+# Create variable for data, so you don't have to keep on writing the full excel file. 
+filename <- "ClassProject_votus_12367_coverm_TPM.xlsx"  # Excel file to read
+
+# Keep vOTUs with greater TPMs. This is so our data is not hinging on stray outliers and focusing on meaningful patterns.  
+tpm_threshold <- 10
+
+# Color gradient for heatmap                                    
+heatmap_colors <- c("#440154", "#31688e", "#35b779", "#fde725") 
+
+# Load required libraries
+library(readxl)    # for reading Excel files
+library(pheatmap)  # for making heatmaps
+
+# Read the Excel file
+cov <- read_xlsx(filename)
+
+# Keep only the Contig column and columns with TPM values from the Excel File. 
+tpm_cols <- grepl("TPM$", names(cov))  # find all column names ending in 'TPM'
+cov_tpm <- cov[ , c("Contig", names(cov)[tpm_cols])]  # subset only relevant columns
+
+# Remove S1k141_26921||full. Some vOTUs may be outliers and can mess up the heatmap
+cov_tpm <- subset(cov_tpm, Contig != "S1k141_26921||full")
+
+# Drop very low-abundance vOTUs. This cleans your data more. 
+cov_tpm$max_tpm <- apply(cov_tpm[ , -1], 1, max, na.rm = TRUE) 
+cov_tpm <- subset(cov_tpm, max_tpm > tpm_threshold)              
+cov_tpm$max_tpm <- NULL  
+
+# Stop if no vOTUs passed the filter. This prevents downstream errors and informs user that threshold may be too high
+if (nrow(cov_tpm) == 0) {
+  stop("No vOTUs passed the TPM threshold. Try lowering tpm_threshold.")}
+
+# Prepare matrix for heatmap. Rows = vOTUs, Cols = samples.
+mat <- as.matrix(cov_tpm[ , -1])
+rownames(mat) <- cov_tpm$Contig
+
+# Log-transform for color scaling. This makes differences easier to see.
+mat_log <- log10(mat + 1)  # +1 to avoid log(0)
+
+# Create the Heat Map. 
+pheatmap(
+  mat_log,
+  cluster_rows = TRUE,  # cluster vOTUs
+  cluster_cols = TRUE,  # cluster samples
+  scale = "none",       # don't scale rows or columns
+  color = colorRampPalette(heatmap_colors)(100),  # gradient colors
+  fontsize_row = 8,
+  fontsize_col = 10,
+  main = "vOTU relative abundance (log10 TPM + 1)")
+```
+
 [heatmap.bioinformatics.pdf](https://github.com/user-attachments/files/26542889/heatmap.bioinformatics.pdf)
+
+Some interpretation of the graphs:
+- Some vOTUs are in high abundance in specific samples while being absent or rare in others, which indicates strong compositional differences between samples
+-  Some samples share pretty similar viral communities, while others are more distinct. A possible explanation could be due to key dominant taxa affecting others prescence
+
+
 
 
