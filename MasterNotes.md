@@ -468,7 +468,7 @@ $ gcloud storage cp home/mrk143/group_project_files/bowtie2/sample3_mrk143/sampl
 # 4/7/26
 # Goal: Create ecological data visualizations to better understand the diversity of our samples. These graphs were created using R and R studio. 
 
-# Bar graphs for Richness and Shannon Diversity
+# Richness and Shannon Diversity
 The votu richness graph helps us compare how many unique vOTUs present are in each sample. The shannon diversity measures both richness and evenness in each sample, which shows how evenly taxa are distributed within each sample.
 
 ```bash
@@ -539,7 +539,7 @@ Some interpretation of the graphs:
 - Richness varied substantially across samples
 - Large richness does not always mean high Shannon Diversity. This could be beacause despite high richness, the community can be dominated by a few taxa. - Samples with medium richness exhibited higher Shannon values (more even distribution)
 
-# Figure results of heatmap
+# Heatmap
 Heatmaps visualize which taxa are present and how abundant they are across samples. 
 ```bash
 
