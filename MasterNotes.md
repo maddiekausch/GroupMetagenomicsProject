@@ -593,8 +593,7 @@ pheatmap(
   fontsize_col = 10,
   main = "vOTU relative abundance (log10 TPM + 1)")
 ```
-
-[heatmap.bioinformatics.pdf](https://github.com/user-attachments/files/26542889/heatmap.bioinformatics.pdf)
+<img width="549" height="857" alt="heatmap bioinformatics (1)" src="https://github.com/user-attachments/assets/4dcd3379-c5e5-4d3c-b820-b991d5ecbd08" />
 
 Some interpretation of the graphs:
 - Some vOTUs are in high abundance in specific samples while being absent or rare in others, which indicates strong compositional differences between samples
